@@ -16,7 +16,7 @@ func init() {
 }
 
 var deleteRecordCmd = &cobra.Command{
-	Use: "delete [zone] [subdomain]",
+	Use: "delete",
 	Run: func(cmd *cobra.Command, args []string) {
 		zone, _ := cmd.Flags().GetString("zone")
 		subdomain, _ := cmd.Flags().GetString("subdomain")
@@ -31,5 +31,6 @@ var deleteRecordCmd = &cobra.Command{
 
 		provider, _ := ovhprovider.NewOvhProvider()
 		provider.DeleteRecord(zone, r)
+		provider.RefreshZone(zone)
 	},
 }

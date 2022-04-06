@@ -16,7 +16,7 @@ func init() {
 }
 
 var listRecordCmd = &cobra.Command{
-	Use: "list [zone]",
+	Use: "list",
 	Run: func(cmd *cobra.Command, args []string) {
 		zone, _ := cmd.Flags().GetString("zone")
 
@@ -24,12 +24,11 @@ var listRecordCmd = &cobra.Command{
 		provider, _ := ovhprovider.NewOvhProvider()
 		r, _ := provider.ListRecords(zone, typeFilter)
 		w := tabwriter.NewWriter(os.Stdout, 5, 5, 5, ' ', 0)
+		fmt.Fprintln(w, fmt.Sprintf("Subdomain\tZone\tType\tTarget"))
+		header := "---------"
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", header, header, header, header)
 		for _, item := range r {
-			if item.Subdomain != "" {
-				fmt.Fprintln(w, fmt.Sprintf("%s.%s\t%s\t%s", item.Subdomain, item.Zone, item.Type, item.Target))
-			} else {
-				fmt.Fprintln(w, fmt.Sprintf("%s\t%s\t%s", item.Zone, item.Type, item.Target))
-			}
+			fmt.Fprintln(w, fmt.Sprintf("%s\t%s\t%s\t%s", item.Subdomain, item.Zone, item.Type, item.Target))
 		}
 		w.Flush()
 	},

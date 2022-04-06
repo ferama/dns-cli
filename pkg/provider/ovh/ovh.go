@@ -3,10 +3,10 @@ package ovhprovider
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/ferama/dns-cli/pkg/dnsrecord"
+	"github.com/ferama/dns-cli/pkg/utils"
 	"github.com/ovh/go-ovh/ovh"
 )
 
@@ -36,9 +36,6 @@ func NewOvhProvider() (*OvhProvider, error) {
 	p := OvhProvider{
 		client: client,
 	}
-
-	// var resp []string
-	// client.Get("/domain/zone", &resp)
 
 	return &p, nil
 }
@@ -81,35 +78,27 @@ func (p *OvhProvider) ListRecords(zone string, typeFilter string) ([]dnsrecord.D
 }
 
 func (p *OvhProvider) AddRecord(zone string, record dnsrecord.DnsRecord) error {
-	// register a record for each ip
-	// for _, ip := range ips {
-	// 	recordBody := recordFields{
-	// 		Target:    ip,
-	// 		TTL:       0,
-	// 		FieldType: "A",
-	// 		SubDomain: subdomain,
-	// 	}
-	// 	log.Printf("ADD A record for subdomain: %s, ip: %s", subdomain, ip)
-	// 	p.client.Post(fmt.Sprintf("/domain/zone/%s/record", p.zone), recordBody, nil)
-	// }
+	recordBody := recordFields{
+		Target:    record.Target,
+		TTL:       int(record.TTL),
+		FieldType: record.Type,
+		SubDomain: record.Subdomain,
+	}
+	fmt.Printf("adding an '%s' record for subdomain '%s' with target '%s'",
+		recordBody.FieldType,
+		recordBody.SubDomain,
+		recordBody.Target)
 
-	// // set subdomain as owned
-	// if !recordExists {
-	// 	txtBody := recordFields{
-	// 		Target:    p.getTxtOwner(),
-	// 		TTL:       0,
-	// 		FieldType: "TXT",
-	// 		SubDomain: strings.TrimSuffix(host, "."+p.zone),
-	// 	}
-	// 	log.Printf("ADD TXT record for subdomain: %s", subdomain)
-	// 	p.client.Post(fmt.Sprintf("/domain/zone/%s/record", p.zone), txtBody, nil)
-	// }
+	p.client.Post(fmt.Sprintf("/domain/zone/%s/record", zone), recordBody, nil)
+
 	return nil
 }
 
 func (p *OvhProvider) DeleteRecord(zone string, record dnsrecord.DnsRecord) error {
 	// p.client.Delete(fmt.Sprintf("/domain/zone/%s/record/%d", p.zone, record.ID), nil)
 	all, _ := p.getRecords(zone, record.Type)
+	ids := make([]int, 0)
+	fmt.Println("I'm going to delete the following records")
 	for _, r := range all {
 		dnsr := dnsrecord.DnsRecord{
 			Zone:      zone,
@@ -119,10 +108,14 @@ func (p *OvhProvider) DeleteRecord(zone string, record dnsrecord.DnsRecord) erro
 			TTL:       int64(r.TTL),
 		}
 		if dnsr.Match(record) {
-			// res = append(res, r)
-			log.Printf("delete record with id %d", r.ID)
 			j, _ := json.Marshal(dnsr)
 			fmt.Println(string(j))
+			ids = append(ids, r.ID)
+		}
+	}
+	if utils.AskForConfirmation("\nProceed?") {
+		for _, id := range ids {
+			p.client.Delete(fmt.Sprintf("/domain/zone/%s/record/%d", zone, id), nil)
 		}
 	}
 	return nil
