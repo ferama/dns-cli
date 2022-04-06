@@ -40,16 +40,29 @@ func NewOvhProvider() (*OvhProvider, error) {
 	return &p, nil
 }
 
-func (p *OvhProvider) getRecords(zone string, typeFilter string) ([]record, error) {
+func (p *OvhProvider) getRecords(zone string, typeFilter string, subdomain string) ([]record, error) {
 	var resp []int
 	var records []record
 	var err error
+
+	queryParams := make([]string, 0)
+	queryString := ""
 	if typeFilter != "" {
 		typeFilter = strings.ToUpper(typeFilter)
-		err = p.client.Get(fmt.Sprintf("/domain/zone/%s/record?fieldType=%s", zone, typeFilter), &resp)
-	} else {
-		err = p.client.Get(fmt.Sprintf("/domain/zone/%s/record", zone), &resp)
+		queryParams = append(queryParams, fmt.Sprintf("fieldType=%s", typeFilter))
 	}
+
+	if subdomain != "" {
+		queryParams = append(queryParams, fmt.Sprintf("subDomain=%s", subdomain))
+	}
+
+	queryString = strings.Join(queryParams, "&")
+	if queryString != "" {
+		queryString = fmt.Sprintf("?%s", queryString)
+	}
+	// err = p.client.Get(fmt.Sprintf("/domain/zone/%s/record?fieldType=%s", zone, typeFilter), &resp)
+	err = p.client.Get(fmt.Sprintf("/domain/zone/%s/record%s", zone, queryString), &resp)
+
 	if err != nil {
 		return nil, err
 	}
@@ -61,10 +74,10 @@ func (p *OvhProvider) getRecords(zone string, typeFilter string) ([]record, erro
 	return records, nil
 }
 
-func (p *OvhProvider) ListRecords(zone string, typeFilter string) ([]dnsrecord.DnsRecord, error) {
+func (p *OvhProvider) ListRecords(zone string, typeFilter string, subdomain string) ([]dnsrecord.DnsRecord, error) {
 	var dnsrecords []dnsrecord.DnsRecord
 
-	records, _ := p.getRecords(zone, typeFilter)
+	records, _ := p.getRecords(zone, typeFilter, subdomain)
 	for _, r := range records {
 		dnsrecords = append(dnsrecords, dnsrecord.DnsRecord{
 			Zone:      zone,
@@ -96,7 +109,7 @@ func (p *OvhProvider) AddRecord(zone string, record dnsrecord.DnsRecord) error {
 
 func (p *OvhProvider) DeleteRecord(zone string, record dnsrecord.DnsRecord) error {
 	// p.client.Delete(fmt.Sprintf("/domain/zone/%s/record/%d", p.zone, record.ID), nil)
-	all, _ := p.getRecords(zone, record.Type)
+	all, _ := p.getRecords(zone, record.Type, record.Subdomain)
 	ids := make([]int, 0)
 	fmt.Println("I'm going to delete the following records")
 	for _, r := range all {
