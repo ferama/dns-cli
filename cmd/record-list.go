@@ -10,23 +10,26 @@ import (
 )
 
 func init() {
-	recordCmd.AddCommand(listCmd)
+	recordCmd.AddCommand(listRecordCmd)
 
-	listCmd.Flags().StringP("type-filter", "t", "", "filter by record type")
+	listRecordCmd.Flags().StringP("type-filter", "t", "", "filter by record type")
 }
 
-var listCmd = &cobra.Command{
-	Use:  "list [zone]",
-	Args: cobra.MinimumNArgs(1),
+var listRecordCmd = &cobra.Command{
+	Use: "list [zone]",
 	Run: func(cmd *cobra.Command, args []string) {
-		zone := args[0]
+		zone, _ := cmd.Flags().GetString("zone")
 
 		typeFilter, _ := cmd.Flags().GetString("type-filter")
-		provider, _ := ovhprovider.NewOvhProvider(zone)
-		r, _ := provider.ListRecords(typeFilter)
+		provider, _ := ovhprovider.NewOvhProvider()
+		r, _ := provider.ListRecords(zone, typeFilter)
 		w := tabwriter.NewWriter(os.Stdout, 5, 5, 5, ' ', 0)
 		for _, item := range r {
-			fmt.Fprintln(w, fmt.Sprintf("%s\t%s\t%s", item.DNSName, item.Type, item.Target))
+			if item.Subdomain != "" {
+				fmt.Fprintln(w, fmt.Sprintf("%s.%s\t%s\t%s", item.Subdomain, item.Zone, item.Type, item.Target))
+			} else {
+				fmt.Fprintln(w, fmt.Sprintf("%s\t%s\t%s", item.Zone, item.Type, item.Target))
+			}
 		}
 		w.Flush()
 	},

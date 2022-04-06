@@ -1,7 +1,10 @@
 package ovhprovider
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
+	"strings"
 
 	"github.com/ferama/dns-cli/pkg/dnsrecord"
 	"github.com/ovh/go-ovh/ovh"
@@ -22,10 +25,9 @@ type record struct {
 
 type OvhProvider struct {
 	client *ovh.Client
-	zone   string
 }
 
-func NewOvhProvider(zone string) (*OvhProvider, error) {
+func NewOvhProvider() (*OvhProvider, error) {
 	client, err := ovh.NewEndpointClient("ovh-eu")
 	if err != nil {
 		return nil, err
@@ -33,7 +35,6 @@ func NewOvhProvider(zone string) (*OvhProvider, error) {
 
 	p := OvhProvider{
 		client: client,
-		zone:   zone,
 	}
 
 	// var resp []string
@@ -42,37 +43,44 @@ func NewOvhProvider(zone string) (*OvhProvider, error) {
 	return &p, nil
 }
 
-func (p *OvhProvider) ListRecords(typeFilter string) ([]dnsrecord.DnsRecord, error) {
+func (p *OvhProvider) getRecords(zone string, typeFilter string) ([]record, error) {
 	var resp []int
-	var records []dnsrecord.DnsRecord
+	var records []record
 	var err error
 	if typeFilter != "" {
-		err = p.client.Get(fmt.Sprintf("/domain/zone/%s/record?fieldType=%s", p.zone, typeFilter), &resp)
+		typeFilter = strings.ToUpper(typeFilter)
+		err = p.client.Get(fmt.Sprintf("/domain/zone/%s/record?fieldType=%s", zone, typeFilter), &resp)
 	} else {
-		err = p.client.Get(fmt.Sprintf("/domain/zone/%s/record", p.zone), &resp)
+		err = p.client.Get(fmt.Sprintf("/domain/zone/%s/record", zone), &resp)
 	}
 	if err != nil {
 		return nil, err
 	}
 	for _, recordId := range resp {
 		var r record
-		err = p.client.Get(fmt.Sprintf("/domain/zone/%s/record/%d", p.zone, recordId), &r)
-		dnsName := p.zone
-		if r.SubDomain != "" {
-			dnsName = fmt.Sprintf("%s.%s", r.SubDomain, p.zone)
-		}
-
-		records = append(records, dnsrecord.DnsRecord{
-			DNSName: dnsName,
-			Target:  r.Target,
-			TTL:     int64(r.TTL),
-			Type:    r.FieldType,
-		})
+		err = p.client.Get(fmt.Sprintf("/domain/zone/%s/record/%d", zone, recordId), &r)
+		records = append(records, r)
 	}
 	return records, nil
 }
 
-func (p *OvhProvider) AddRecord(record dnsrecord.DnsRecord) error {
+func (p *OvhProvider) ListRecords(zone string, typeFilter string) ([]dnsrecord.DnsRecord, error) {
+	var dnsrecords []dnsrecord.DnsRecord
+
+	records, _ := p.getRecords(zone, typeFilter)
+	for _, r := range records {
+		dnsrecords = append(dnsrecords, dnsrecord.DnsRecord{
+			Zone:      zone,
+			Subdomain: r.SubDomain,
+			Target:    r.Target,
+			TTL:       int64(r.TTL),
+			Type:      r.FieldType,
+		})
+	}
+	return dnsrecords, nil
+}
+
+func (p *OvhProvider) AddRecord(zone string, record dnsrecord.DnsRecord) error {
 	// register a record for each ip
 	// for _, ip := range ips {
 	// 	recordBody := recordFields{
@@ -99,7 +107,28 @@ func (p *OvhProvider) AddRecord(record dnsrecord.DnsRecord) error {
 	return nil
 }
 
-func (p *OvhProvider) DeleteRecord(record dnsrecord.DnsRecord) error {
+func (p *OvhProvider) DeleteRecord(zone string, record dnsrecord.DnsRecord) error {
 	// p.client.Delete(fmt.Sprintf("/domain/zone/%s/record/%d", p.zone, record.ID), nil)
+	all, _ := p.getRecords(zone, record.Type)
+	for _, r := range all {
+		dnsr := dnsrecord.DnsRecord{
+			Zone:      zone,
+			Subdomain: r.SubDomain,
+			Target:    r.Target,
+			Type:      r.FieldType,
+			TTL:       int64(r.TTL),
+		}
+		if dnsr.Match(record) {
+			// res = append(res, r)
+			log.Printf("delete record with id %d", r.ID)
+			j, _ := json.Marshal(dnsr)
+			fmt.Println(string(j))
+		}
+	}
+	return nil
+}
+
+func (p *OvhProvider) RefreshZone(zone string) error {
+	p.client.Post(fmt.Sprintf("/domain/zone/%s/refresh", zone), nil, nil)
 	return nil
 }
