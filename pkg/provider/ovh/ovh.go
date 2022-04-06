@@ -71,3 +71,35 @@ func (p *OvhProvider) ListRecords(typeFilter string) ([]dnsrecord.DnsRecord, err
 	}
 	return records, nil
 }
+
+func (p *OvhProvider) AddRecord(record dnsrecord.DnsRecord) error {
+	// register a record for each ip
+	// for _, ip := range ips {
+	// 	recordBody := recordFields{
+	// 		Target:    ip,
+	// 		TTL:       0,
+	// 		FieldType: "A",
+	// 		SubDomain: subdomain,
+	// 	}
+	// 	log.Printf("ADD A record for subdomain: %s, ip: %s", subdomain, ip)
+	// 	p.client.Post(fmt.Sprintf("/domain/zone/%s/record", p.zone), recordBody, nil)
+	// }
+
+	// // set subdomain as owned
+	// if !recordExists {
+	// 	txtBody := recordFields{
+	// 		Target:    p.getTxtOwner(),
+	// 		TTL:       0,
+	// 		FieldType: "TXT",
+	// 		SubDomain: strings.TrimSuffix(host, "."+p.zone),
+	// 	}
+	// 	log.Printf("ADD TXT record for subdomain: %s", subdomain)
+	// 	p.client.Post(fmt.Sprintf("/domain/zone/%s/record", p.zone), txtBody, nil)
+	// }
+	return nil
+}
+
+func (p *OvhProvider) DeleteRecord(record dnsrecord.DnsRecord) error {
+	// p.client.Delete(fmt.Sprintf("/domain/zone/%s/record/%d", p.zone, record.ID), nil)
+	return nil
+}
