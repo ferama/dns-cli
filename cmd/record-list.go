@@ -23,6 +23,7 @@ var listRecordCmd = &cobra.Command{
 		subdomain, _ := cmd.Flags().GetString("subdomain")
 
 		typeFilter, _ := cmd.Flags().GetString("type-filter")
+
 		provider, _ := ovhprovider.NewOvhProvider()
 		r, _ := provider.ListRecords(zone, typeFilter, subdomain)
 
