@@ -71,6 +71,9 @@ func (p *OvhProvider) getRecords(zone string, typeFilter string, subdomain strin
 		err = p.client.Get(fmt.Sprintf("/domain/zone/%s/record/%d", zone, recordId), &r)
 		records = append(records, r)
 	}
+	if err != nil {
+		return nil, err
+	}
 	return records, nil
 }
 
@@ -137,4 +140,13 @@ func (p *OvhProvider) DeleteRecord(zone string, record dnsrecord.DnsRecord) erro
 func (p *OvhProvider) RefreshZone(zone string) error {
 	p.client.Post(fmt.Sprintf("/domain/zone/%s/refresh", zone), nil, nil)
 	return nil
+}
+
+func (p *OvhProvider) ListDomains() ([]string, error) {
+	var resp []string
+	err := p.client.Get("/domain", &resp)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
 }

@@ -8,4 +8,6 @@ type Provider interface {
 	AddRecord(string, dnsrecord.DnsRecord) error
 	DeleteRecord(string, dnsrecord.DnsRecord) error
 	RefreshZone(string) error
+
+	ListDomains() ([]string, error)
 }

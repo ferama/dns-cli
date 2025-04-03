@@ -28,11 +28,11 @@ var listRecordCmd = &cobra.Command{
 		r, _ := provider.ListRecords(zone, typeFilter, subdomain)
 
 		w := tabwriter.NewWriter(os.Stdout, 5, 5, 5, ' ', 0)
-		fmt.Fprintln(w, fmt.Sprintf("Subdomain\tZone\tType\tTarget"))
+		fmt.Fprintf(w, "Subdomain\tZone\tType\tTarget\n")
 		header := "---------"
 		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", header, header, header, header)
 		for _, item := range r {
-			fmt.Fprintln(w, fmt.Sprintf("%s\t%s\t%s\t%s", item.Subdomain, item.Zone, item.Type, item.Target))
+			fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", item.Subdomain, item.Zone, item.Type, item.Target)
 		}
 		w.Flush()
 	},
